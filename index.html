@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RruleWhy - when does this iCalendar RRULE actually happen?</title>
+<meta name="description" content="Paste an RRULE and a start date: see the real dates, a plain-words reading, and the traps in RFC 5545.">
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#150f22; color:#f1ebfb; line-height:1.6; }
+  .wrap { max-width:680px; margin:0 auto; padding:48px 20px 60px; }
+  .logo { font-size:46px; font-weight:800; } .logo span { color:#c4b5fd; }
+  .tag { font-size:19px; margin-top:10px; color:#ddd3fb; }
+  .cta { display:inline-block; margin-top:26px; background:#c4b5fd; color:#150f22; font-weight:700; padding:14px 30px; border-radius:12px; text-decoration:none; }
+  h2 { font-size:21px; margin:40px 0 10px; } li { color:#bcaedb; margin-bottom:8px; } ul { margin-left:20px; }
+  .demo { margin-top:26px; background:#211733; border-radius:14px; padding:18px; } .demo b { color:#c4b5fd; }
+  footer { margin-top:50px; font-size:13px; color:#9585b8; } a { color:#c4b5fd; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">Rrule<span>Why</span></div>
+  <div class="tag">"Monthly on the 31st" does not mean the last day of the month.</div>
+  <a class="cta" href="app.html">Open the app</a>
+  <div class="demo">Start on <b>31 January</b> with <b>FREQ=MONTHLY</b> and you get January, March, May, July: February, April, June are skipped, not moved. Two biweekly rules that differ only in <b>WKST</b> give different dates. RruleWhy shows both.</div>
+  <h2>What it does</h2>
+  <ul><li>Lists the next dates an RRULE produces, with weekdays</li><li>Reads the rule back in plain words</li><li>Flags rule mistakes the RFC forbids, and traps the RFC leaves open</li><li>Matches every day-level example fetched from RFC 5545 and Python dateutil on random rules</li></ul>
+  <footer>Follows RFC 5545 section 3.3.10. Static, client-side, nothing sent. <a href="https://github.com/iLanis-agent/rrulewhy">Source</a></footer>
+</div>
+</body>
+</html>
