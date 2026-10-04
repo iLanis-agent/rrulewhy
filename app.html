@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RruleWhy - when does this iCalendar RRULE actually happen?</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#150f22; color:#f1ebfb; line-height:1.5; }
+  .wrap { max-width:720px; margin:0 auto; padding:26px 16px 50px; }
+  h1 { font-size:28px; } h1 span { color:#c4b5fd; }
+  .sub { color:#bcaedb; margin:6px 0 16px; }
+  .card { background:#211733; border-radius:14px; padding:14px; margin-bottom:12px; }
+  label { font-size:12px; color:#bcaedb; display:block; margin-bottom:3px; }
+  input[type=text], select { width:100%; background:#150f22; color:#f1ebfb; border:1px solid #5a4690; border-radius:8px; padding:9px; font-size:14px; font-family:ui-monospace,Menlo,monospace; }
+  select { font-family:inherit; }
+  .grid { display:grid; grid-template-columns:2fr 1fr; gap:10px; margin-bottom:10px; }
+  button { background:#6d28d9; color:#f1ebfb; border:0; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px; margin-right:6px; margin-top:8px; }
+  .cb { display:flex; align-items:center; gap:6px; font-size:13px; color:#bcaedb; margin-top:10px; } .cb input { width:auto; }
+  .muted { color:#bcaedb; font-size:13px; } .note { font-size:12.5px; color:#9585b8; margin-top:6px; } .err { color:#ff9c8a; font-size:14px; margin-top:4px; }
+  .desc { font-size:17px; font-weight:700; color:#ddd3fb; margin-bottom:8px; }
+  .n { border-top:1px solid #3b2d5c; padding:7px 0; font-size:13.5px; color:#d5c9ee; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin-top:8px; } td { padding:3px 6px; border-bottom:1px solid #2f2349; font-family:ui-monospace,Menlo,monospace; }
+  td.i { color:#9585b8; width:36px; } td.w { color:#c4b5fd; } tr.first td { color:#fcd34d; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Rrule<span>Why</span></h1>
+  <div class="sub">Paste an iCalendar RRULE and a start date. RruleWhy lists the dates it really produces, says it in plain words, and points out the traps: the 31st that skips months, the BYSETPOS that picks a different day, the week start that moves dates.</div>
+  <div class="card">
+    <div class="grid">
+      <div><label>RRULE</label><input type="text" id="r" spellcheck="false"></div>
+      <div><label>DTSTART (floating time)</label><input type="text" id="s" spellcheck="false"></div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr 2fr"><div><label>Show</label><select id="l"><option value="12">first 12</option><option value="30" selected>first 30</option><option value="100">first 100</option></select></div>
+    <label class="cb" style="margin-top:22px"><input type="checkbox" id="k"> Drop DTSTART when it does not match the rule (Python dateutil style; the RFC keeps it)</label></div>
+    <div><button id="p1">Friday the 13th</button><button id="p2">Last weekday of month</button><button id="p3">31st of the month</button><button id="p4">Biweekly, WKST=MO</button><button id="p5">Biweekly, WKST=SU</button><button id="p6">US election day</button></div>
+    <div id="err" class="err"></div>
+  </div>
+  <div class="card"><div id="out"></div></div>
+  <div class="note">Whole-day rules only: FREQ DAILY, WEEKLY, MONTHLY, YEARLY with INTERVAL, COUNT, UNTIL, WKST, BYMONTH, BYWEEKNO, BYYEARDAY, BYMONTHDAY, BYDAY, BYSETPOS. No hours or minutes, no time zones or daylight saving, no EXDATE or RDATE. Follows RFC 5545 section 3.3.10 (read in full); checked against every day-level example in section 3.8.5.3 that was fetched and against Python dateutil on random rules. Nothing leaves your browser.</div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  var R = window.RruleWhy, $ = function (i) { return document.getElementById(i); };
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  var P = {
+    p1: ['FREQ=MONTHLY;BYDAY=FR;BYMONTHDAY=13', '19970902T090000', true],
+    p2: ['FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1', '20240131T090000', false],
+    p3: ['FREQ=MONTHLY;COUNT=8', '20240131T090000', false],
+    p4: ['FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=MO', '19970805T090000', false],
+    p5: ['FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=TU,SU;WKST=SU', '19970805T090000', false],
+    p6: ['FREQ=YEARLY;INTERVAL=4;BYMONTH=11;BYDAY=TU;BYMONTHDAY=2,3,4,5,6,7,8', '19961105T090000', false]
+  };
+  Object.keys(P).forEach(function (k) { $(k).onclick = function () { $('r').value = P[k][0]; $('s').value = P[k][1]; $('k').checked = P[k][2]; run(); }; });
+  function run() {
+    var o = $('out'), res = R.run({ dtstart: $('s').value, rule: $('r').value, limit: +$('l').value, skipUnsynced: $('k').checked });
+    $('err').textContent = '';
+    if (res.errors.length) { o.innerHTML = res.errors.map(function (e) { return '<div class="err">' + esc(e) + '</div>'; }).join(''); return; }
+    var h = '<div class="desc">' + esc(res.description) + '</div>';
+    if (!res.shown.length) h += '<div class="muted">No dates found.</div>';
+    else {
+      h += '<table>' + res.shown.map(function (d, i) { var p = d.text.split(' '); return '<tr' + (i === 0 ? ' class="first"' : '') + '><td class="i">' + (i + 1) + '</td><td class="w">' + esc(d.iso) + '</td><td>' + esc(d.text) + '</td></tr>'; }).join('') + '</table>';
+      h += '<div class="muted" style="margin-top:6px">' + res.shown.length + ' date' + (res.shown.length === 1 ? '' : 's') + (res.moreMayExist ? ', and it keeps going' : (res.rule.count || res.rule.until ? ' in total' : '')) + '</div>';
+    }
+    res.notes.forEach(function (n) { h += '<div class="n">' + esc(n) + '</div>'; });
+    o.innerHTML = h;
+  }
+  ['r', 's'].forEach(function (i) { $(i).oninput = run; }); $('l').onchange = run; $('k').onchange = run;
+  $('p1').onclick();
+})();
+</script>
+</body>
+</html>
